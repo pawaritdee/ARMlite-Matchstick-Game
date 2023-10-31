@@ -1,4 +1,4 @@
-# armlite matchstick game
+# ARMlite Matchstick Game
  Player VS Computer matchstick game on ARMlite simulator
 
 Stage 1
