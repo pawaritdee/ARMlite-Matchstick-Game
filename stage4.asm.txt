@@ -1,0 +1,806 @@
+// REGISTER USAGES
+// R0 - Mainly for Function Arguments, Inputs 
+// R1 - Multiple Purposes, graphic function
+// R2 - Multiple Purposes, graphic function
+// R3 - Minus Matchstick, Multiple Purposes
+// R4 - Multiple Purposes, mainly use in functions
+// R5 - Multiple Purposes, mainly use in functions
+// R6 - Multiple Purposes, mainly use in functions
+// R7 - Multiple Purposes, mainly use in functions
+// R8 - Name Array and also use in functions
+// R9 - Matchsticks Amount Used to Deduct
+// R10 - Initial Matchsticks amount
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Computer System - Assignment 2 ;;
+;; Pawarit Sethi - 104474272 ;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+// Take in Player's Name
+playerName: 
+      MOV R0, #msgName 
+      BL message
+      MOV R8, #name     ;; R8 stores Name
+      STR R8, .ReadString ;; R8 gets input for Name
+// Player inputs Matchstick Num
+stickSelection: 
+      MOV R0, #msgSticks
+      BL message
+      LDR R10, .InputNum ;; R10 stores Initial Matchsticks count
+      CMP R10, #5
+      BLT stickSelection ;; If less than 5, go back
+      CMP R10, #100
+      BGT stickSelection ;; If greater than 100, go back
+// Reads out information after input - Start of Game
+gameInfo:
+      MOV R9, R10       ;; R9 Stores In-game Matchstick Counts
+      BL graphic        ;; Graphic Update
+      MOV R0, #start1
+      BL message        ;; Player name's Message
+      STR R8, .WriteString ;; Player's name
+      MOV R0, #start2 
+      BL message        ;; Matchstick message
+      STR R9, .WriteUnsignedNum ;; Matchstick counts
+// Matchstick Remaining Message
+playerTurn:
+      BL matchstickRemaining ;; Matchstick Remaining Message
+      BL playerRemove
+// Player Input Matchsticks to Remove
+playerNumInput:
+      LDR R3, .InputNum ;; R3 is matchstick removed num
+      CMP R3, #3 
+      BGT playerNumInput ;; Not Greater than 3
+      CMP R3, #1
+      BLT playerNumInput ;; Not Less than 1
+      CMP R3, R9 
+      BGT playerNumInput ;; Not greater than the matchstick amounts
+      MOV R0, #start9
+      BL message 
+      STR R3, .WriteUnsignedNum
+      SUB R9, R9, R3    ;; Subtract Matchstick Counts
+      BL graphic        ;; Graphic Update
+      CMP R9, #1
+      BEQ playerWin     ;; Matchstick = 1, player wins
+      CMP R9, #0
+      BEQ draw          ;; Matchstick = 0, it's a draw
+computerTurn:
+      MOV R0, #start7
+      BL message
+      BL computerRemove
+      SUB R9, R9, R3
+      MOV R0, #start8
+      BL message
+      STR R3, .WriteUnsignedNum
+      BL graphic        ;; Graphic Update
+      CMP R9, #1
+      BEQ computerWin   ;; Matchstick = 1, computer wins
+      CMP R9, #0
+      BEQ draw          ;; Matchstick = 0, it's a draw
+      B playerTurn      ;; Game continues, alternates to player's turn
+      HALT 
+// Functions and Labels
+// Functions
+message:                ;; Send Message Function
+      PUSH {R3}
+      MOV R3, R0
+      STR R3, .WriteString
+      POP {R3}
+      RET
+matchstickRemaining:    ;; Send Matchstick Remaining Message
+      MOV R0, #start3
+      MOV R1, #start4
+      MOV R2, #start5
+      MOV R3, R0
+      MOV R4, R1
+      MOV R5, R2
+      STR R3, .WriteString
+      STR R8, .WriteString
+      STR R4, .WriteString
+      STR R9, .WriteUnsignedNum
+      STR R5, .WriteString
+      RET
+playerRemove:           ;; Player Remove Matchstick Message
+      MOV R0, #start3
+      PUSH {LR}
+      BL message
+      STR R8, .WriteString
+      MOV R0, #start6
+      BL message 
+      POP {LR}
+      RET
+computerRemove:         ;; Computer Remove Matchstick Messag
+      LDR R3, .Random
+      AND R3, R3, #3
+      CMP R3, #0
+      BEQ computerRemove
+      CMP R3, R9
+      BGT computerRemove
+      BEQ computerRemove
+      RET
+computerWin:            ;; When Computer Wins
+      PUSH {LR}
+      BL clearCanvas    ;; Function to clear canvas
+      POP {LR}
+      PUSH {LR}
+      BL youLoseGraphic ;; Shows "You Lose!" Graphic
+      POP {LR}
+      MOV R0, #start3
+      BL message
+      STR R8, .WriteString
+      MOV R0, #end1
+      BL message        ;; Send You Lose message in i/o box
+      B playAgain       ;; Branch to Play Again
+playerWin:              ;; When Player wins
+      PUSH {LR}
+      BL clearCanvas    ;; Function to clear canvas
+      POP {LR}
+      PUSH {LR}
+      BL youWinGraphic  ;; Shows "You Win!" Graphic
+      POP {LR}
+      MOV R0, #start3
+      BL message
+      STR R8, .WriteString
+      MOV R0, #end2
+      BL message
+      B playAgain       ;; You win message in I/O box
+draw:                   ;; When the game ends on a Draw
+      PUSH {LR}
+      BL clearCanvas    ;; Clear Canvas
+      POP {LR}
+      PUSH {LR}
+      BL drawGraphic    ;; Show "DRAW" graphic
+      POP {LR}
+      MOV R0, #end3
+      BL message        ;; Send Draw Message
+      B playAgain
+playAgain:              ;; Play Again? (y/n)
+      PUSH {R3, R4, R5, R6}
+      MOV R0, #restart
+      BL message
+      MOV R6, #1        ;; 1 byte
+      MOV R4, #answer
+      STR R4, .ReadString
+      LDRB R5, [R4 + R6] ;; increment 1 byte to check for extra letters
+      CMP R5, #0        ;; Compare with NULL
+      BEQ proceed       ;; If second letter is null, proceed
+      BGT playAgain     ;; If second letter have, then pick again
+proceed:
+      LDRB R5, [R4]     ;; Go back to validate first letter, (y or n)
+      CMP R5, #121
+      BEQ gameInfo
+      CMP R5, #110
+      BEQ endGame
+      POP {R3, R4, R5, R6}
+      B playAgain
+endGame:
+      HALT
+// STAGE 4 IMPLEMENTATIONS 
+graphic:
+      PUSH {R1, R2, R3, R4, R5, R6, R7, R8, R10, R11}
+      MOV R11, #.PixelScreen //Start of the mid-res pixel screen memory
+// Colors
+      mov r1, #.red     // RED color for tip of matchstick
+      mov r2, #0xf5cf6e // Yellow-orangish color for the stick part
+// ADD A CLEAR ALL FUNCTION HERE (CLEAR CANVAS)
+      PUSH {LR}
+      BL clearCanvas
+      POP {LR}
+//Starting Point! (first matchstick)
+      mov r3, #12032    ;; stick part
+      mov r4, #11776    ;; stick part
+      mov r5, #11520    ;; stick part
+      mov r6, #11264    ;; red firey part
+      mov r7, #0        ;; INDEX
+      MOV r8, r9        ;; Matchsticks
+startStick:
+      CMP R7, R8 
+      BLT drawStick     ;; If Index is Less than Matchsticks Amount then Draw Stick
+      B Done
+drawStick:
+      str r2, [R11 + r3] ;; Draw First Pixel of Stick
+      str r2, [R11 + r4] ;; Draw Second Pixel of Stick
+      str r2, [R11 + r5] ;; Draw Third Pixel of Stick
+      str R11, [R11 + r6] ;; Draw Fourth Pixel of Stick
+      ADD R7, R7, #1    ;; Index += 1
+      CMP R7, R8        ;; Compare Index with Matchstick amounts
+      BLT addStick      ;; If index < matchsticks, add more stick
+      B Done            ;; Otherwise, skip to done!
+addStick:
+// First start by adding each pixel position by 8 bytes which is equivalent to 2 pixels.
+      ADD r3, r3, #8 
+      ADD r4, r4, #8 
+      ADD r5, r5, #8 
+      ADD r6, r6, #8 
+// Draw the pixels with the newly allocated 
+      str r2, [R11 + r3]
+      str r2, [R11 + r4]
+      str r2, [R11 + r5]
+      str r1, [R11 + r6]
+      ADD R7, R7, #1    ;; Index += 1
+      CMP R7, #32       ;; Compare Index with 32
+      BEQ nextLayer     ;; If index = 32 then move up a layer
+      CMP R7, #64       ;; Compare Index with 64
+      BEQ nextLayer     ;; If index = 64 then move up a layer
+      CMP R7, #96       ;; Compare Index with 96
+      BEQ nextLayer     ;; If index = 96 then move up a layer
+      CMP R7, R8 
+      BLT addStick      ;; If index < matchsticks, add more stick
+// End of Function
+Done:
+      POP {R1, R2, R3, R4, R5, R6, R7, R8, R10, R11}
+      RET
+nextLayer:
+      MOV R10, #1528    ;; 1528 is the amount of bytes needed to move to the next layer
+      SUB R3, R3, R10
+      SUB R4, R4, R10
+      SUB R5, R5, R10
+      SUB R6, R6, R10
+      B startStick
+clearCanvas:
+      PUSH {R3, R4, R5, R6}
+      MOV R3, #.Pixel0  // First Pixel
+      MOV R4, #3072     // Amount of Pixels
+      MOV R5, #0        // Index
+      MOV R6, #.white   // Color White
+      CMP R5, R4
+      BLT clear
+clear:                  ;; A Loop that "clears" the canvas
+      STR R6, [R3 + R5]
+      ADD R5, R5, #4
+      CMP R5, R4
+      BLT clear
+      POP {R3, R4, R5, R6}
+      RET
+// Hardcoded "You Win!" Graphic utilizing pixelDraw functions
+youWinGraphic:
+      PUSH {R3, R4, R5, LR}
+      MOV R3, #.PixelScreen
+      MOV R4, #.black
+// STARTING POINT for Y
+      MOV R5, #2872
+      BL pixelDraw
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      ADD R5, R5, #256
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawRight
+      add R5, R5, #4
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      SUB R3, R3, #8
+      ADD R3, R3, #1024
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+// STARTING POINT for O
+      MOV R3, #.PixelScreen
+      MOV R5, #2896
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      ADD R5, R5, #256
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawRight
+      add R5, R5, #4
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      SUB R5, R5, #256
+      BL pixelDrawLeft
+      Bl pixelDrawLeft
+      BL pixelDrawLeft
+// STARTING POINT for U
+      MOV R3, #.PixelScreen
+      MOV R5, #2920
+      BL pixelDraw
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      ADD R5, R5, #256
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawRight
+      add R5, R5, #4
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+// STARTING POINT for W
+      MOV R3, #.PixelScreen
+      MOV R5, #2952
+      BL pixelDraw
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      ADD R5, R5, #256
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawRight
+      add R5, R5, #4
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      SUB R5, R5, #8    ;; Adjust back to middle point of U
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+// STARTING POINT for I
+      MOV R3, #.PixelScreen
+      MOV R5, #2976
+      BL pixelDraw
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+// STARTING POINT for N
+      MOV R3, #.PixelScreen
+      MOV R5, #2984
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      MOV R3, #.PixelScreen
+      MOV R5, #2984
+      BL pixelDrawRight
+      add R5, R5, #4
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      ADD R5, R5, #256
+      BL pixelDrawRight
+      add R5, R5, #4
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+// STARTING POINT for Exclamation Mark
+      MOV R3, #.PixelScreen
+      MOV R5, #3008
+      BL pixelDraw
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      ADD R5, R5, #256
+      BL pixelDrawDown
+      POP {R3, R4, R5, LR}
+      RET
+// GRAPHIC FOR PLAYER LOSES - utilizing pixelDraw functions
+youLoseGraphic:
+      PUSH {R3, R4, R5, LR}
+      MOV R3, #.PixelScreen
+      MOV R4, #.black
+// STARTING POINT for Y
+      MOV R5, #2856
+      BL pixelDraw
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      ADD R5, R5, #256
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawRight
+      add R5, R5, #4
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      SUB R3, R3, #8
+      ADD R3, R3, #1024
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+// STARTING POINT for O
+      MOV R3, #.PixelScreen
+      MOV R5, #2880
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      ADD R5, R5, #256
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawRight
+      add R5, R5, #4
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      SUB R5, R5, #256
+      BL pixelDrawLeft
+      Bl pixelDrawLeft
+      BL pixelDrawLeft
+// STARTING POINT for U
+      MOV R3, #.PixelScreen
+      MOV R5, #2904
+      BL pixelDraw
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      ADD R5, R5, #256
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawRight
+      add R5, R5, #4
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+// STARTING POINT for L
+      MOV R3, #.PixelScreen
+      MOV R5, #2936
+      BL pixelDraw
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawRight
+// STARTING POINT for O
+      MOV R3, #.PixelScreen
+      MOV R5, #2956
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      ADD R5, R5, #256
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawRight
+      add R5, R5, #4
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      SUB R5, R5, #256
+      BL pixelDrawLeft
+      Bl pixelDrawLeft
+      BL pixelDrawLeft
+// STARTING POINT for S
+      MOV R3, #.PixelScreen
+      MOV R5, #2996
+      BL pixelDraw
+      BL pixelDrawLeft
+      BL pixelDrawLeft
+      BL pixelDrawLeft
+      SUB R5, R5, #4
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      ADD R5, R5, #256
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawRight
+      add R5, R5, #4
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      ADD R5, R5, #256
+      BL pixelDrawLeft
+      BL pixelDrawLeft
+      BL pixelDrawLeft
+      BL pixelDrawLeft
+// STARTING POINT for E
+      MOV R3, #.PixelScreen
+      MOV R5, #3020
+      BL pixelDraw
+      BL pixelDrawLeft
+      BL pixelDrawLeft
+      BL pixelDrawLeft
+      SUB R5, R5, #4
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      ADD R5, R5, #256
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawRight
+      SUB R5, R5, #1280
+      BL pixelDrawLeft
+      BL pixelDrawLeft
+      BL pixelDrawLeft
+      BL pixelDrawLeft
+// STARTING POINT for Exclamation Mark
+      MOV R3, #.PixelScreen
+      MOV R5, #3028
+      BL pixelDraw
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      ADD R5, R5, #256
+      BL pixelDrawDown
+      POP {R3, R4, R5, LR}
+      RET
+// GRAPHIC FOR WHEN DRAW
+drawGraphic:
+      PUSH {R3, R4, R5, LR}
+      MOV R3, #.PixelScreen
+      MOV R4, #.black
+// STARTING POINT for D
+      MOV R5, #2892
+      BL pixelDraw
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawUp
+      BL pixelDrawRight
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawLeft
+      BL pixelDrawUp
+      BL pixelDrawLeft
+      BL pixelDrawLeft
+      BL pixelDrawLeft 
+// STARTING POINT for R
+      MOV R5, #2916
+      BL pixelDraw
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      MOV R5, #2916
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawDown
+      BL pixelDrawRight
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawLeft
+      BL pixelDrawDown
+      BL pixelDrawLeft
+      BL pixelDrawLeft
+      BL pixelDrawLeft
+      add R5, R5, #16
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown 
+// STARTING POINT for A
+      MOV R5, #2940
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      MOV R5, #2940
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawRight
+      add R5, R5, #4
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      SUB R5, R5, #1024
+      BL pixelDrawLeft
+      BL pixelDrawLeft
+      BL pixelDrawLeft
+// STARTING POINT for W
+      MOV R5, #2964
+      BL pixelDraw
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawRight
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      BL pixelDrawUp
+      SUB R5, R5, #8    ;; Adjust back to middle point of U
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+// STARTING POINT for Exclamation Mark
+      MOV R3, #.PixelScreen
+      MOV R5, #2988
+      BL pixelDraw
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      BL pixelDrawDown
+      ADD R5, R5, #256
+      BL pixelDrawDown
+      POP {R3, R4, R5, LR}
+      RET
+// Pixel Drawing Functions - makes life a lot easier
+pixelDraw:
+      STR R4, [R3 + R5] ;; Draw where position is
+      RET
+pixelDrawDown:
+      ADD R5, R5, #256  ;; Draw one pixel down where position is
+      STR R4, [R3 + R5]
+      RET
+pixelDrawRight:
+      add R5, R5, #4    ;; Draw one pixel right next to set position
+      STR R4, [R3 + R5]
+      RET
+pixelDrawUp:
+      SUB R5, R5, #256  ;; Draw one pixel up from set position
+      STR R4, [R3 + R5]
+      RET
+pixelDrawLeft:
+      SUB R5, R5, #4    ;; Draw one pixel right next to set position
+      STR R4, [R3 + R5]
+      RET
+// Labels
+msgName: .ASCIZ "Please enter your name"
+msgSticks: .ASCIZ "\nHow many matchsticks(5-100)?"
+start1: .ASCIZ "\nPlayer 1 is "
+start2: .ASCIZ "\nMatchsticks: "
+start3: .ASCIZ "\nPlayer "
+start4: .ASCIZ ", there are "
+start5: .ASCIZ "matchsticks remaining"
+start6: .ASCIZ ", how many do you want to remove(1-3)?"
+start7: .ASCIZ "\nComputer Player's Turn"
+start8: .ASCIZ "\nMatchsticks removed by Computer: "
+start9: .ASCIZ "\nMatchsticks removed by Player: "
+end1: .ASCIZ ", YOU LOSE!"
+end2: .ASCIZ ", YOU WIN!"
+end3: .ASCIZ "\nIt's a draw!"
+restart: .ASCIZ "\nPlay again(y/n)?"
+      .Align 1024
+name: .BLOCK 128
+answer: .BLOCK 128

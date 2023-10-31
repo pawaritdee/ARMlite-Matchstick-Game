@@ -1,0 +1,156 @@
+// Take in Player's Name
+playerName: 
+      MOV R0, #msgName 
+      BL message
+      MOV R8, #name     ;; R8 stores Name
+      STR R8, .ReadString ;; R8 gets input for Name
+// Player inputs Matchstick Num
+stickSelection: 
+      MOV R0, #msgSticks
+      BL message
+      LDR R10, .InputNum ;; R10 stores Initial Matchsticks count
+      CMP R10, #5
+      BLT stickSelection ;; If less than 5, go back
+      CMP R10, #100
+      BGT stickSelection ;; If greater than 100, go back
+// Reads out information after input - Start of Game
+gameInfo:
+      MOV R9, R10       ;; R9 Stores In-game Matchstick Counts
+      MOV R0, #start1
+      BL message        ;; Player name's Message
+      STR R8, .WriteString ;; Player's name
+      MOV R0, #start2 
+      BL message        ;; Matchstick message
+      STR R9, .WriteUnsignedNum ;; Matchstick counts
+// Matchstick Remaining Message
+playerTurn:
+      BL matchstickRemaining ;; Matchstick Remaining Message
+      BL playerRemove
+// Player Input Matchsticks to Remove
+playerNumInput:
+      LDR R3, .InputNum ;; R3 is matchstick removed num
+      CMP R3, #3 
+      BGT playerNumInput ;; Not Greater than 3
+      CMP R3, #1
+      BLT playerNumInput ;; Not Less than 1
+      CMP R3, R9 
+      BGT playerNumInput ;; Not greater than the matchstick amounts
+      MOV R0, #start9
+      BL message
+      STR R3, .WriteUnsignedNum
+      SUB R9, R9, R3    ;; Subtract Matchstick Counts
+      CMP R9, #1
+      BEQ playerWin     ;; Matchstick = 1, player wins
+      CMP R9, #0
+      BEQ draw          ;; Matchstick = 0, it's a draw
+computerTurn:
+      MOV R0, #start7
+      BL message
+      BL computerRemove
+      SUB R9, R9, R3
+      MOV R0, #start8
+      BL message
+      STR R3, .WriteUnsignedNum
+      CMP R9, #1
+      BEQ computerWin   ;; Matchstick = 1, computer wins
+      CMP R9, #0
+      BEQ draw          ;; Matchstick = 0, it's a draw
+      B playerTurn      ;; Game continues, alternates to player's turn
+      HALT 
+// Functions and Labels
+// Functions
+message:                ;; Send Message Function
+      PUSH {R3}
+      MOV R3, R0
+      STR R3, .WriteString
+      POP {R3}
+      RET
+matchstickRemaining:
+      MOV R0, #start3
+      MOV R1, #start4
+      MOV R2, #start5
+      MOV R3, R0
+      MOV R4, R1
+      MOV R5, R2
+      STR R3, .WriteString
+      STR R8, .WriteString
+      STR R4, .WriteString
+      STR R9, .WriteUnsignedNum
+      STR R5, .WriteString
+      RET
+playerRemove:
+      MOV R0, #start3
+      PUSH {LR}
+      BL message
+      STR R8, .WriteString
+      MOV R0, #start6
+      BL message 
+      POP {LR}
+      RET
+computerRemove:
+      LDR R3, .Random
+      AND R3, R3, #3
+      CMP R3, #0
+      BEQ computerRemove
+      CMP R3, R9
+      BGT computerRemove
+      BEQ computerRemove
+      RET
+computerWin:
+      MOV R0, #start3
+      BL message
+      STR R8, .WriteString
+      MOV R0, #end1
+      BL message
+      B playAgain
+playerWin:
+      MOV R0, #start3
+      BL message
+      STR R8, .WriteString
+      MOV R0, #end2
+      BL message
+      B playAgain
+draw:
+      MOV R0, #end3
+      BL message
+      B playAgain
+playAgain:
+      PUSH {R3, R4, R5, R6}
+      MOV R0, #restart
+      BL message
+      MOV R6, #1        ; 1 byte
+      MOV R4, #answer
+      STR R4, .ReadString
+      LDRB R5, [R4 + R6] ; increment 1 byte to check for extra letters
+      CMP R5, #0        ; Compare with NULL
+      BEQ proceed       ; If second letter is null, proceed
+      BGT playAgain     ; If second letter have, then pick again
+proceed:
+      LDRB R5, [R4]     ; Go back to validate first letter, (y or n)
+      CMP R5, #121
+      BEQ gameInfo
+      CMP R5, #110
+      BEQ endGame
+      POP {R3, R4, R5, R6}
+      B playAgain
+endGame:
+      HALT
+// Labels
+msgName: .ASCIZ "Please enter your name"
+msgSticks: .ASCIZ "\nHow many matchsticks(5-100)?"
+start1: .ASCIZ "\nPlayer 1 is "
+start2: .ASCIZ "\nMatchsticks: "
+start3: .ASCIZ "\nPlayer "
+start4: .ASCIZ ", there are "
+start5: .ASCIZ "matchsticks remaining"
+start6: .ASCIZ ", how many do you want to remove(1-3)?"
+start7: .ASCIZ "\nComputer Player's Turn"
+start8: .ASCIZ "\nMatchsticks removed by Computer: "
+start9: .ASCIZ "\nMatchsticks removed by Player: "
+end1: .ASCIZ ", YOU LOSE!"
+end2: .ASCIZ ", YOU WIN!"
+end3: .ASCIZ "\nIt's a draw!"
+restart: .ASCIZ "\nPlay again(y/n)?"
+      .Align 256
+name: .BLOCK 128
+answer: .BLOCK 128

@@ -1,0 +1,35 @@
+// Take in Player's Name
+playerName: 
+      MOV R0, #msgName 
+      BL message
+      MOV R8, #name     ;; R8 stores Name
+      STR R8, .ReadString ;; R8 gets input for Name
+// Player inputs Matchstick Num
+stickSelection: 
+      MOV R0, #msgSticks
+      BL message
+      LDR R10, .InputNum ;; R10 stores Matchsticks count
+      CMP R10, #5
+      BLT stickSelection ;; If less than 5, go back
+      CMP R10, #100
+      BGT stickSelection ;; If greater than 100, go back
+// Reads out information after input
+gameInfo:
+      MOV R0, #start1
+      BL message        ;; Player name's Message
+      STR R8, .WriteString ;; Player's name
+      MOV R0, #start2 
+      BL message        ;; Matchstick message
+      STR R10, .WriteUnsignedNum ;; Matchstick counts
+      HALT              ;; END
+// Functions and Labels
+message:                ;; Send Message Function
+      MOV R3, R0
+      STR R3, .WriteString
+      RET
+msgName: .ASCIZ "Please enter your name"
+msgSticks: .ASCIZ "\nHow many matchsticks(5-100)?"
+start1: .ASCIZ "\nPlayer 1 is "
+start2: .ASCIZ "\nMatchsticks: "
+      .Align 256
+name: .BLOCK 128
