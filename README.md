@@ -11,7 +11,7 @@ Built on from stage 1 but player can now play the game but just by removing matc
 Game functionality is complete, a computer player has been added to play against the player. Play again option is added for rematch.
 
 ### Stage 4
-version. Graphics implemented.
+Final version with Graphics implemented.
 
 
 ### How to Play?
